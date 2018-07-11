@@ -1,108 +1,30 @@
 package io.github.vkb24312.PopArtIfier;
 
-import com.xuggle.mediatool.IMediaWriter;
-import com.xuggle.xuggler.io.XugglerIO;
-import org.openimaj.image.FImage;
-import org.openimaj.image.ImageUtilities;
-import org.openimaj.image.MBFImage;
-import org.openimaj.video.translator.FImageToMBFImageVideoTranslator;
-import org.openimaj.video.xuggle.XuggleVideo;
-import org.openimaj.video.xuggle.XuggleVideoWriter;
-
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.Scanner;
 
 public class Main {
 
     public static void main(String[] args) throws IOException {
-        //region Get the FileNames of the images
-        final JPanel panel = new JPanel();
+        JPanel panel = new JPanel();
 
-        final JFileChooser jfk = new JFileChooser();
-        panel.add(jfk);
+        BufferedImage in = chooseImage(panel);
+        if (in == null) System.exit(0);
+        panel.removeAll();
 
-        jfk.setDialogTitle("Choose your image");
-        jfk.setFileFilter(new FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                return f.isDirectory() || getType(f).toLowerCase().equals("jpg") || getType(f).toLowerCase().equals("jpeg") || getType(f).toLowerCase().equals("png") || getType(f).toLowerCase().equals("gif") || getType(f).toLowerCase().equals("bmp") || getType(f).toLowerCase().equals("wbmp");
-            }
+        BufferedImage out = imageConvert(in);
 
-            @Override
-            public String getDescription() {
-                return "Music Files";
-            }
-        });
+        File outFile = suitableOutput(chooseOutputDirectory(panel), "output", ".png");
 
-        int out = jfk.showOpenDialog(panel);
-
-        if(out==JFileChooser.APPROVE_OPTION){
-            panel.remove(jfk);
-
-            JFileChooser jfc = new JFileChooser();
-            panel.add(jfc);
-            jfc.setDialogTitle("Choose the output's directory");
-            jfc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-
-            int dOut = jfc.showOpenDialog(panel);
-
-            if(dOut==JFileChooser.APPROVE_OPTION){
-                BufferedImage imageOut = imageConvert(ImageIO.read(jfk.getSelectedFile()));
-                File fileOut = new File(jfc.getSelectedFile().toString() + "/output.png");
-                ImageIO.write(imageOut, getType(fileOut), fileOut);
-            } else return;
-
-        } else {
-            return;
-        }
-
-        /*
-        Scanner in = new Scanner(System.in);
-        in.useDelimiter("\n");
-
-        System.out.println("Full path of image/video");
-        File inFile = new File(in.next());
-        if(!inFile.exists()) {
-            System.out.println("File does not exist");
-            main(args);
-            System.exit(0);
-        }
-        BufferedImage inImage = ImageIO.read(inFile);
-
-        System.out.println("Full path of output");
-        File outFile = new File(in.next());
-
-        if(outFile.exists()) {
-            System.out.println("File exists");
-            main(args);
-            System.exit(0);
-        }
-
-        BufferedImage outImage;
-
-        //endregion
-
-        if(getType(inFile).toLowerCase().equals("jpg") || getType(inFile).toLowerCase().equals("jpeg") || getType(inFile).toLowerCase().equals("png") || getType(inFile).toLowerCase().equals("gif") || getType(inFile).toLowerCase().equals("bmp") || getType(inFile).toLowerCase().equals("wbmp")) {
-
-            outImage = imageConvert(inImage);
-            ImageIO.write(outImage, getType(outFile), outFile);
-        }
-
-        else {
-            System.out.println("Please use a valid image type file");
-            System.exit(1);
-        }*/
+        ImageIO.write(out, getType(outFile), outFile);
     }
 
-    private static BufferedImage imageConvert(BufferedImage image){
+    private static BufferedImage imageConvert(BufferedImage image) {
         BufferedImage out = new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
 
         for (int x = 0; x < image.getWidth(); x++) {
@@ -113,9 +35,9 @@ public class Main {
                 int g = 0;
                 int b = 0;
 
-                if(inColor.getRed()>=128) r = 255;
-                if(inColor.getGreen()>=128) g = 255;
-                if(inColor.getBlue()>=128) b = 255;
+                if (inColor.getRed() >= 128) r = 255;
+                if (inColor.getGreen() >= 128) g = 255;
+                if (inColor.getBlue() >= 128) b = 255;
 
                 Color outColor = new Color(r, g, b);
 
@@ -124,30 +46,6 @@ public class Main {
         }
 
         return out;
-    }
-
-    private static void videoConvert(XuggleVideo video, File output){
-        BufferedImage[] frames = new BufferedImage[(int) video.countFrames()];
-
-        video.seekToBeginning();
-
-        for (int i = 0; i < frames.length; i++) {
-            frames[i] = imageConvert(ImageUtilities.createBufferedImage(video.getNextFrame()));
-        }
-
-        FImage[] out = new FImage[frames.length];
-
-        for (int i = 0; i < out.length; i++) {
-            out[i] = ImageUtilities.createFImage(frames[i]);
-        }
-
-        XuggleVideoWriter xvw = new XuggleVideoWriter("tempfile.mp4", video.getWidth(), video.getHeight(), video.getFPS());
-
-        for (int i = 0; i < out.length; i++) {
-            xvw.addFrame(ImageUtilities.createMBFImage(ImageUtilities.createBufferedImage(out[i]), false));
-        }
-
-        xvw.close();
     }
 
 
@@ -159,5 +57,65 @@ public class Main {
         }
 
         return fileType;
+    }
+
+    private static BufferedImage chooseImage(Component parent) throws IOException{
+        JFileChooser imageChooser = new JFileChooser();
+        imageChooser.setDialogTitle("Choose the input image");
+
+        imageChooser.setFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                return f.isDirectory() ||
+                        getType(f).toLowerCase().equals("jpg") ||
+                        getType(f).toLowerCase().equals("jpeg") ||
+                        getType(f).toLowerCase().equals("png") ||
+                        getType(f).toLowerCase().equals("gif") ||
+                        getType(f).toLowerCase().equals("bmp") ||
+                        getType(f).toLowerCase().equals("wbmp");
+            }
+
+            @Override
+            public String getDescription() {
+                return "Supported Image Files (jpg, jpeg, png, gif, bmp, wbmp)";
+            }
+        });
+
+        int result = imageChooser.showOpenDialog(parent);
+
+        if(result==JFileChooser.APPROVE_OPTION){
+            return ImageIO.read(imageChooser.getSelectedFile());
+        } else {
+            return null;
+        }
+    }
+
+    private static File chooseOutputDirectory(Component parent){ //returns directory
+        JFileChooser dirChooser = new JFileChooser();
+        dirChooser.setDialogTitle("Choose the output directory");
+        dirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+        int result = dirChooser.showOpenDialog(parent);
+
+        if(result==JFileChooser.APPROVE_OPTION){
+            return dirChooser.getSelectedFile();
+        } else {
+            return null;
+        }
+    }
+
+    private static File suitableOutput(File directory, String preferredName, String extension){ //Extension with a dot
+        if(!new File(directory, preferredName+extension).exists())
+            return new File(directory, preferredName+extension); //Check if already available
+
+        String newName = preferredName;
+        int i = 2;
+
+        while(new File(directory, newName+extension).exists()){
+            newName = preferredName + " " + i + extension;
+            i++;
+        }
+
+        return new File(directory, newName+extension);
     }
 }
