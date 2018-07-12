@@ -1,4 +1,4 @@
-package io.github.vkb24312.PopArtIfier;
+package io.github.vkb24312.ImageMod;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
