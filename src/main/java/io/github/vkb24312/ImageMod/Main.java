@@ -4,9 +4,14 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collections;
 
 public class Main {
 
@@ -16,15 +21,23 @@ public class Main {
         BufferedImage in = chooseImage(panel);
         if (in == null) System.exit(0);
         panel.removeAll();
+        panel.setVisible(false);
 
-        BufferedImage out = imageConvert(in);
+        int filter = new Optioner(new String[]{"Saturate", "RGB-ize", "Average-ize"}).getOption();
+
+        BufferedImage out;
+
+        if(filter==0) out = saturate(in);
+        else if(filter==1) out = colorize(in);
+        else if(filter==2) out = averageizer(in);
+        else out = in;
 
         File outFile = suitableOutput(chooseOutputDirectory(panel), "output", ".png");
 
         ImageIO.write(out, getType(outFile), outFile);
     }
 
-    private static BufferedImage imageConvert(BufferedImage image) {
+    private static BufferedImage saturate(BufferedImage image) {
         BufferedImage out = new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
 
         for (int x = 0; x < image.getWidth(); x++) {
@@ -48,6 +61,64 @@ public class Main {
         return out;
     }
 
+    private static BufferedImage colorize(BufferedImage image) {
+        BufferedImage out = new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
+
+        for (int x = 0; x < image.getWidth(); x++) {
+            for (int y = 0; y < image.getHeight(); y++) {
+                Color xyColor = new Color(image.getRGB(x, y));
+
+                int r = xyColor.getRed();
+                int g = xyColor.getGreen();
+                int b = xyColor.getBlue();
+
+                Color chosen;
+
+                if(r>g && r>b) chosen = new Color(r, 0, 0);
+                else if(g>r && g>b) chosen = new Color(0, g, 0);
+                else if(b>g && b>r) chosen = new Color(0, 0, b);
+                else chosen = Color.BLACK;
+
+                out.setRGB(x, y, chosen.getRGB());
+            }
+        }
+
+        return out;
+    }
+
+    private static BufferedImage averageizer(BufferedImage image){
+        BigInteger totalR = new BigInteger("0");
+        BigInteger totalG = new BigInteger("0");
+        BigInteger totalB = new BigInteger("0");
+        BigInteger totalPixels = new BigInteger(Long.toString((long)image.getHeight()*(long)image.getHeight()));
+
+        for (int x = 0; x < image.getWidth(); x++) {
+            for (int y = 0; y < image.getHeight(); y++) {
+                Color currentColor = new Color(image.getRGB(x, y));
+
+                totalR = totalR.add(new BigInteger(Integer.toString(currentColor.getRed())));
+                totalG = totalG.add(new BigInteger(Integer.toString(currentColor.getGreen())));
+                totalB = totalB.add(new BigInteger(Integer.toString(currentColor.getBlue())));
+
+                totalPixels = totalPixels.add(new BigInteger("1"));
+            }
+        }
+
+        int averageR = Integer.parseInt(totalR.divide(totalPixels).toString());
+        int averageG = Integer.parseInt(totalG.divide(totalPixels).toString());
+        int averageB = Integer.parseInt(totalB.divide(totalPixels).toString());
+
+        Color ac = new Color(averageR, averageG, averageB);
+        BufferedImage out = new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
+
+        for (int x = 0; x < image.getWidth(); x++) {
+            for (int y = 0; y < image.getHeight(); y++) {
+                out.setRGB(x, y, ac.getRGB());
+            }
+        }
+
+        return out;
+    }
 
     private static String getType(File file){
         String fileType = "";
@@ -112,10 +183,55 @@ public class Main {
         int i = 2;
 
         while(new File(directory, newName+extension).exists()){
-            newName = preferredName + " " + i + extension;
+            newName = preferredName + " " + i;
             i++;
         }
 
         return new File(directory, newName+extension);
+    }
+}
+
+class Optioner extends JFrame{
+    private int result = -1;
+    private ArrayList<String> options = new ArrayList<>();
+
+    Optioner(String[] options){
+        Collections.addAll(this.options, options);
+    }
+
+    int getOption(){
+        if(result>=0) return result;
+
+        JPanel panel = new JPanel();
+        this.setVisible(true);
+        this.add(panel);
+        this.setSize(options.size()*100, 100);
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        this.setLocation(screenSize.width/2-this.getSize().width/2, screenSize.height/2-this.getSize().height/2);
+
+        final JButton[] buttons = new JButton[options.size()];
+
+        for (int i = 0; i < buttons.length; i++) {
+            buttons[i] = new JButton(options.get(i));
+        }
+
+        for (JButton button : buttons) {
+            panel.add(button);
+        }
+
+        for (final JButton button : buttons) {
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    for (int i = 0; i < options.size(); i++) {
+                        if(button.getText().equals(options.get(i))) result = i;
+                    }
+                }
+            });
+        }
+
+        while(result<0){try{Thread.sleep(5);}catch(InterruptedException ignore){}}
+        dispose();
+        return result;
     }
 }
