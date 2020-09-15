@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Random;
 
 public class Main {
 
@@ -23,18 +24,48 @@ public class Main {
         panel.removeAll();
         panel.setVisible(false);
 
-        int filter = new Optioner(new String[]{"Saturate", "RGB-ize", "Average-ize"}).getOption();
+        int filter = new Optioner(new String[]{"Saturate", "RGB-ize", "Average-ize", "Random-ify"}).getOption();
 
         BufferedImage out;
 
         if(filter==0) out = saturate(in);
         else if(filter==1) out = colorize(in);
         else if(filter==2) out = averageizer(in);
+        else if(filter==3) out = randomGray(in);
         else out = in;
 
         File outFile = suitableOutput(chooseOutputDirectory(panel), "output", ".png");
 
         ImageIO.write(out, getType(outFile), outFile);
+    }
+
+    private static BufferedImage randomGray(BufferedImage in){
+        BufferedImage out = new BufferedImage(in.getWidth(), in.getHeight(), in.getType());
+
+        for(int x = 0; x < in.getWidth(); x++){
+            for (int y = 0; y < in.getHeight(); y++){
+                Color inColour = new Color(in.getRGB(x, y));
+
+                int sum = inColour.getRed()+inColour.getGreen()+inColour.getBlue();
+
+                Random r = new Random();
+                int or,og,ob;
+                do {
+                    double rr = r.nextDouble();
+                    double rg = r.nextDouble();
+                    double rb = r.nextDouble();
+
+                    double rs = rr + rg + rb;
+
+                    or = (int) ((rr / rs) * sum);
+                    og = (int) ((rg / rs) * sum);
+                    ob = (int) ((rb / rs) * sum);
+                } while (or>255 || og>255 || ob>255);
+
+                out.setRGB(x, y, new Color(or, og, ob).getRGB());
+            }
+        }
+        return out;
     }
 
     private static BufferedImage saturate(BufferedImage image) {
